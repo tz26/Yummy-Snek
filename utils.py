@@ -1,5 +1,8 @@
 import enum
 
+from consts import TERMINAL_MOVE
+from consts import SAFE_TILE, HAZARD_TILE
+
 
 class Moves(enum.Enum):
     UP = enum.auto()
@@ -30,6 +33,28 @@ def convert_move_to_offset(move: Moves) -> tuple[int, int]:
         return (1, 0)
 
 
+def convert_offset_to_move(offset: tuple[int, int]) -> Moves:
+    if offset == (0, 1):
+        return Moves.UP
+    elif offset == (0, -1):
+        return Moves.DOWN
+    elif offset == (-1, 0):
+        return Moves.LEFT
+    elif offset == (1, 0):
+        return Moves.RIGHT
+
+
+def get_best_move(moves_dict: dict) -> Moves:
+    best_move = Moves.UP
+    best_value = moves_dict[best_move]
+    for move in Moves:
+        if best_value < moves_dict[move]:
+            best_move = move
+            best_value = moves_dict[move]
+
+    return best_move
+
+
 def apply_move_to_pos(current_pos, move: Moves) -> dict:
     offset = convert_move_to_offset(move)
     return {
@@ -52,3 +77,34 @@ def find_closest_pos_in_list(current_pos, other_pos_list: list) -> dict:
             closest_pos = other_pos
 
     return closest_pos
+
+
+def avoid_snake(safe_moves: set, my_pos, snake):
+    for move in safe_moves.copy():
+        new_pos = apply_move_to_pos(my_pos, move)
+
+        for body_pos in snake["body"]:
+            if new_pos == body_pos:
+                safe_moves[move] -= TERMINAL_MOVE
+
+
+def generate_obstacle_board(game_state: dict) -> list[list[int]]:
+    board_width = game_state["board"]["width"]
+    board_height = game_state["board"]["height"]
+
+    board = [[SAFE_TILE * board_width] for _ in range(board_height)]
+
+    snakes = game_state["board"]["snakes"]
+
+    for snake in snakes:
+        snake_body = snake["body"]
+
+        for body in snake_body:
+            x = body["x"]
+            y = body["y"]
+
+            board[y][x] = HAZARD_TILE
+
+    # TODO: take into account hazards as well in the future
+    return board
+
